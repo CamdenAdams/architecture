@@ -41,12 +41,12 @@ using namespace std;
 
 // all variables should be initialized upon creation unless done intentionally for reasons i cannot remember
 
-class pass {
+class Pass {
     // public access functions and variables
     public:         
-        // pass(DWORD processID);
-        pass();
-        ~pass();
+        // Pass(DWORD processID);
+        Pass();
+        ~Pass();
 
 
         void attach(DWORD processID);           // public access function declaration
@@ -63,30 +63,30 @@ class pass {
 };
 
 // constructor function - this function might give public access to h
-// pass::pass(DWORD processID) { 
+// Pass::Pass(DWORD processID) { 
 //     HANDLE h{ OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION, FALSE, processID) };
 //     if (h == NULL) DBOUT << "NULL HANDLE" << endl;
 // }
 
-pass::pass() { }
-pass::~pass() {
+Pass::Pass() { }
+Pass::~Pass() {
     if (xh != NULL) CloseHandle(xh);
 }
 
-void pass::attach(DWORD processID) {
+void Pass::attach(DWORD processID) {
     xh = OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION, FALSE, processID);
     if(xh == NULL) DBOUT << "NULL HANDLE" << endl;
 }
 
-void pass::read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size, SIZE_T byteReadBuffer) {
+void Pass::read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size, SIZE_T byteReadBuffer) {
     WINBOOL read = ReadProcessMemory(xh, readVarBaseAddress, readVarBufferAddress, size, &byteReadBuffer);
     if(read == FALSE) DBOUT << "READ FAIL: " << GetLastError() << endl << "byteReadBuffer: " << byteReadBuffer << endl;
 }
 
-void pass::write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size, SIZE_T byteWroteBuffer) {
+void Pass::write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size, SIZE_T byteWroteBuffer) {
     WINBOOL write = WriteProcessMemory(xh, writeVarBaseAddress, writeVarBufferAddress, size, &byteWroteBuffer);
     if(write == FALSE) DBOUT << "WRITE FAIL: " << GetLastError() << endl << "byteWroteBuffer: " << byteWroteBuffer << endl;
 }
 
 // ¯\_(ツ)_/¯
-int pass::return_five() { int five{ 5 }; return five; }
+int Pass::return_five() { int five{ 5 }; return five; }
