@@ -40,7 +40,15 @@
 using namespace std;
 
 // all variables should be initialized upon creation unless done intentionally for reasons i cannot remember
+// I believe that c/cpp classes should use capital casing
+// I need to create a player objects struct
+//      Where do I create the struct?
 
+/**
+ * I need to create a player objects struct > Where do I create the struct?
+ *      What does the struct do? provides a number of player based variables and the memory offsets from the game's base address
+ *      Since public access is required for the struct and this class simply takes memory address, let's build it into another file
+*/
 class Pass {
     // public access functions and variables
     public:         
@@ -50,14 +58,19 @@ class Pass {
 
 
         void attach(DWORD processID);           // public access function declaration
+        WINBOOL handleCheck();
         int return_five();
+
+        void read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size);
+        void write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size);
 
 
     private:
         HANDLE xh{ };
 
-        void read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size, SIZE_T byteReadBuffer);
-        void write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size, SIZE_T byteWroteBuffer);
+        SIZE_T byteReadBuffer{ };
+        SIZE_T byteWroteBuffer{ };
+        
 
         
 };
@@ -78,15 +91,17 @@ void Pass::attach(DWORD processID) {
     if(xh == NULL) DBOUT << "NULL HANDLE" << endl;
 }
 
-void Pass::read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size, SIZE_T byteReadBuffer) {
+void Pass::read(LPCVOID readVarBaseAddress, LPVOID readVarBufferAddress, SIZE_T size) {
     WINBOOL read = ReadProcessMemory(xh, readVarBaseAddress, readVarBufferAddress, size, &byteReadBuffer);
     if(read == FALSE) DBOUT << "READ FAIL: " << GetLastError() << endl << "byteReadBuffer: " << byteReadBuffer << endl;
 }
 
-void Pass::write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size, SIZE_T byteWroteBuffer) {
+void Pass::write(LPVOID writeVarBaseAddress, LPVOID writeVarBufferAddress, SIZE_T size) {
     WINBOOL write = WriteProcessMemory(xh, writeVarBaseAddress, writeVarBufferAddress, size, &byteWroteBuffer);
     if(write == FALSE) DBOUT << "WRITE FAIL: " << GetLastError() << endl << "byteWroteBuffer: " << byteWroteBuffer << endl;
 }
+
+WINBOOL Pass::handleCheck() { return xh != NULL ? TRUE : FALSE; }
 
 // ¯\_(ツ)_/¯
 int Pass::return_five() { int five{ 5 }; return five; }

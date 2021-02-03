@@ -32,4 +32,8 @@
 
 int main() {
 
+
+    // initialize by fetching client processID
+
+    // load menu
 }
