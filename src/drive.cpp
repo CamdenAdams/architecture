@@ -1,18 +1,20 @@
-/** 
- * char - supports UTF-8 encoding - 8 bit type
- * wchar_t - supports UTF-16LE encoding - 16-bit type
- *  - UTF-16LE is the default character set for Windows operating systems - since we're working with the Windows api, makes sense we would use it
- *  - https://docs.microsoft.com/en-us/cpp/cpp/char-wchar-t-char16-t-char32-t?view=msvc-160
- * 
- */ 
 
+#include<iostream>
 #include"p.h"
 
-/**
- * 
- * 
- * 
- */
+using namespace std;
+
+int main() {
+
+    cout << "press any key" << endl;
+    getchar();
+    cout << "explorer.exe processId: " << getProcessID(L"explorer.exe") << endl;
+    getchar();
+
+
+    return EXIT_SUCCESS;
+}
+
 DWORD getProcessID(const wchar_t* processName) {
 
     /** HANDLE WINAPI CreateToolhelp32Snapshot(DWORD dwFlags,DWORD th32ProcessID);
@@ -43,7 +45,7 @@ DWORD getProcessID(const wchar_t* processName) {
                  * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/stricmp-wcsicmp-mbsicmp-stricmp-l-wcsicmp-l-mbsicmp-l?view=msvc-160
                  * @return 0 if identicle, less than 0 if string1 < string2, greater than 0 if string1 > string2
                  */
-                if (_wcsicmp(procEntry.szExeFile, processName) == 0) // case insensitive comparison of process name from procEntry and function argument - Using over: if (procEntry.szExeFile == processName)
+                if (!_wcsicmp(procEntry.szExeFile, processName)) // case insensitive comparison of process name from procEntry and function argument - Using over: if (procEntry.szExeFile == processName)
                 {
                     DWORD procID{ procEntry.th32ProcessID };
                     CloseHandle(hProcSnap);
