@@ -1,60 +1,81 @@
 
-#include<iostream>
 #include"p.h"
 
-using namespace std;
+// using namespace std;
 
-int main() {
+int main(int argc, char *argv[]) {
 
-    cout << "press any key" << endl;
-    getchar();
-    cout << "explorer.exe processId: " << getProcessID(L"explorer.exe") << endl;
-    getchar();
+    // resolved from pointer chain exercise
+    // 02A1A5C0 = value = 14
 
+    // basePtr -> address + offset(n) = address
 
-    return EXIT_SUCCESS;
-}
+    // 1. basePtr -> address + 0x0 = 02A1A5C0
+    //     02A1A5C0 - 0x0 = 02A1A5C0
+    //     address = 02A1A5C0
+    //     basePtr = 02A11834 [found via hex scan for 02A1A5C0]
+    //         02A11834 -> 02A1A5C0 + 0x0 = 02A1A5C0
 
-DWORD getProcessID(const wchar_t* processName) {
+    // 2. 02A1A7F4 -> 02A11820 + 0x14 = 02A11834
 
-    /** HANDLE WINAPI CreateToolhelp32Snapshot(DWORD dwFlags,DWORD th32ProcessID);
-     * https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot
-     * @param DWORD dwFlags: indicates portion of the systems to be included in the snapshot
-     *      value = TH32CS_SNAPPROCESS - requests all processes in the system in the snapshot
-     * @param DWORD th32ProcessID: The process identifier of the process to be included in the snapshot. This parameter can be zero to indicate the current process
-     * @return success > returns open object handle to snapshot : failure > returns INVALID_HANDLE_VALUE
-     */
-    HANDLE hProcSnap{ CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
-    if (hProcSnap != INVALID_HANDLE_VALUE)
+    // 3. basePtr -> address + offset(n) = 02A1A7F4
+    // ac_client.exe+10F4F4 -> 02A1A470 + 0x384 = 02A1A7F4
+    //     02A1A7F4 - 0x384 = 02A1A470
+    //     static base = ac_client.exe+10F4F4 = 0x0050F4F4
+
+    // static base + offset1 + offset2 + offset3 = startAddress
+    // ac_client.exe+10F4F4 (0x0050F4F4) + 0x0384 + 0x14 + 0x0 = 02A1A5C0
+    // [[[[ac_client.exe+10F4F4] + 0x384] + 0x14] + 0x0] = 02A1A5C0
+
+    uintptr_t relativeOffsetToPlayerBase{ 0x010F4F4 };
+
+    // unsigned int vector containing offsets to target dynamic memory address
+    std::vector<unsigned int> offsetsToCurrentAmmo{ 0x384, 0x14, 0x0 };
+
+    // get processID
+    // L"ac_client.exe" returns a (pointer)L"ac_client.exe"
+    DWORD processID{ getProcessID(L"ac_client.exe") };
+    if (!processID)
     {
-        // PROCESSENTRY32 Struct - peek (alt+f12) tlhelp32.h (line 80)
-        // The size of the structure, in bytes. Before calling the Process32First function, set this member to sizeof(PROCESSENTRY32). If you do not initialize dwSize, Process32First fails.
-        PROCESSENTRY32 procEntry{ dwSize: sizeof(PROCESSENTRY32) };     // I do not think this works
-        // PROCESSENTRY32 procEntry{ };
-        // procEntry.dwSize = sizeof(procEntry);
-
-        /** WINBOOL WINAPI Process32First(HANDLE hSnapshot,LPPROCESSENTRY32W lppe);
-         * https://docs.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32first
-         * @return TRUE if the first entry of the process list has been copied to the buffer, otherwise FALSE
-         */
-        if (Process32First(hProcSnap, &procEntry)) {
-
-            do
-            {
-                /** int _wcsicmp(const char *string1, const char *string2)
-                 * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/stricmp-wcsicmp-mbsicmp-stricmp-l-wcsicmp-l-mbsicmp-l?view=msvc-160
-                 * @return 0 if identicle, less than 0 if string1 < string2, greater than 0 if string1 > string2
-                 */
-                if (!_wcsicmp(procEntry.szExeFile, processName)) // case insensitive comparison of process name from procEntry and function argument - Using over: if (procEntry.szExeFile == processName)
-                {
-                    DWORD procID{ procEntry.th32ProcessID };
-                    CloseHandle(hProcSnap);
-                    return procID;
-                }
-            } while (Process32Next(hProcSnap, &procEntry));     // Process32Next() is very similar to Process32First(), simply copies the next process entry to the buffer instead of the first
-        }
+        std::cout << "Process failed to initialize, processID = " << processID << std::endl;
+        getchar();
+        return EXIT_FAILURE;
     }
-    
-    CloseHandle(hProcSnap);
-    return 0;
+    else {
+        // get module base address, base address of ac_client.exe
+        uintptr_t moduleBaseAddress{ getModuleBaseAddress(processID, L"ac_client.exe") };
+
+        // fetch process handle with least permissions required
+        HANDLE hProcess{ OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION, FALSE, processID) };
+        if (hProcess == INVALID_HANDLE_VALUE)
+        {
+            std::cout << "HANDLE IS NULL: " << GetLastError() << std::endl;
+            getchar();
+            return EXIT_FAILURE;
+        }
+
+        // resolve base address of pointer chain - in respect to assault cube, this is base address to player object
+        uintptr_t dynamicPtrToBaseAddress{ moduleBaseAddress + relativeOffsetToPlayerBase };
+        std::cout << "dynamicPtrToBaseAddress = " << "0x" << std::hex << dynamicPtrToBaseAddress << std::endl;
+
+        // resolve ammo pointer chain
+        uintptr_t currentAmmoAddress{ findDMAAddr(hProcess, dynamicPtrToBaseAddress, offsetsToCurrentAmmo) };
+        std::cout << "currentAmmoAddress = " << "0x" << std::hex << currentAmmoAddress << std::endl;
+
+        int ammoValue{ 0 };
+        ReadProcessMemory(hProcess, (LPCVOID)currentAmmoAddress, &ammoValue, sizeof(ammoValue), nullptr);
+        std::cout << "ammoValue = " << std::dec << ammoValue << std::endl;
+
+        int newAmmoValue{ 9999 };
+        WriteProcessMemory(hProcess, (LPVOID)currentAmmoAddress, &newAmmoValue, sizeof(newAmmoValue), nullptr);
+
+        ReadProcessMemory(hProcess, (LPCVOID)currentAmmoAddress, &ammoValue, sizeof(ammoValue), nullptr);
+        std::cout << "ammoValue = " << std::dec << ammoValue << std::endl;
+
+        std::cout << "Press enter to close" << std::endl;
+        getchar();
+
+        return EXIT_SUCCESS;
+
+    }    
 }
